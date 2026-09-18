@@ -1,0 +1,109 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Totem Padaria</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f8f9fa; overflow: hidden; }
+        .sidebar { width: 25%; background-color: #ffffff; border-right: 2px solid #e9ecef; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; background-color: #ffc107; color: #212529; text-align: center; font-size: 1.3rem; font-weight: bold; }
+        .category-btn { padding: 25px 20px; text-align: left; background: none; border: none; border-bottom: 1px solid #f1f3f5; font-size: 1.1rem; font-weight: bold; color: #495057; cursor: pointer; width: 100%; }
+        .category-btn.active { background-color: #fff9db; color: #f59f00; border-left: 6px solid #f59f00; }
+        .main-content { width: 75%; display: flex; flex-direction: column; height: 100%; }
+        .grid-container { padding: 30px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; overflow-y: auto; flex-grow: 1; }
+        .card { background: white; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
+        .ingredient-img { width: 150px; height: 150px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; background-color: #f1f3f5; }
+        .ingredient-name { font-size: 1.1rem; color: #212529; font-weight: bold; margin-bottom: 5px; }
+        .ingredient-price { color: #2b8a3e; font-weight: bold; margin-bottom: 15px; }
+        .quantity-control { display: flex; align-items: center; background-color: #f1f3f5; border-radius: 30px; padding: 5px; }
+        .btn-qty { background: #ffc107; color: #212529; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 1.4rem; font-weight: bold; cursor: pointer; }
+        .qty-text { width: 40px; text-align: center; font-size: 1.2rem; font-weight: bold; color: #212529; }
+        .footer-banner { height: 90px; background-color: #ffffff; border-top: 2px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; }
+        .total-wrapper { font-size: 1.5rem; font-weight: bold; color: #212529; }
+        .total-val { color: #2b8a3e; margin-left: 5px; }
+        .btn-checkout { background-color: #2b8a3e; color: white; border: none; padding: 16px 40px; font-size: 1.2rem; font-weight: bold; border-radius: 30px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">Totem Padaria</div>
+        <button class="category-btn active" onclick="filtrar('pães', this)">🍞 Escolha o Pão</button>
+        <button class="category-btn" onclick="filtrar('recheios', this)">🧀 Queijos & Recheios</button>
+    </div>
+
+    <div class="main-content">
+        <div class="grid-container">
+            {% for ingrediente in ingredientes %}
+            <!-- ALINHADO: Usando preco_adicional aqui para ler do banco -->
+            <div class="card" data-preco="{{ ingrediente.preco_adicional }}" data-cat="{{ ingrediente.categoria.nome|lower }}">
+                {% if ingrediente.imagem %}
+                    <img src="{% static ingrediente.imagem %}" alt="{{ ingrediente.nome }}" class="ingredient-img">
+                {% else %}
+                    <img src="https://placehold.co{{ ingrediente.nome }}" alt="Sem foto" class="ingredient-img">
+                {% endif %}
+                <div>
+                    <div class="ingredient-name">{{ ingrediente.nome }}</div>
+                    <div class="ingredient-price">R$ {{ ingrediente.preco_adicional }}</div>
+                </div>
+                <div class="quantity-control">
+                    <button type="button" class="btn-qty" onclick="mudar(this, -1)">-</button>
+                    <span class="qty-text">0</span>
+                    <button type="button" class="btn-qty" onclick="mudar(this, 1)">+</button>
+                </div>
+            </div>
+            {% empty %}
+            <p style="padding: 20px; color: #868e96;">Abra o painel /admin para cadastrar os produtos!</p>
+            {% endfor %}
+        </div>
+
+        <div class="footer-banner">
+            <div class="total-wrapper">Total: <span id="total-txt" class="total-val">R$ 0,00</span></div>
+            <button class="btn-checkout">Finalizar Pedido ➔</button>
+        </div>
+    </div>
+
+    <script>
+        function filtrar(categoria, botao) {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            botao.classList.add('active');
+            document.querySelectorAll('.card').forEach(c => {
+                const cat = c.getAttribute('data-cat');
+                if (cat && cat.includes(categoria)) {
+                    c.style.display = 'flex';
+                } else {
+                    c.style.display = 'none';
+                }
+            });
+        }
+
+        window.onload = function() {
+            const btn = document.querySelector('.category-btn.active');
+            if (btn) filtrar('pães', btn);
+        };
+
+        function mudar(botao, valor) {
+            const txt = botao.parentElement.querySelector('.qty-text');
+            let n = parseInt(txt.innerText) + valor;
+            if (n >= 0 && n <= 4) {
+                txt.innerText = n;
+                somar();
+            }
+        }
+
+        function somar() {
+            let t = 0;
+            document.querySelectorAll('.card').forEach(c => {
+                const p = parseFloat(c.getAttribute('data-preco'));
+                const q = parseInt(c.querySelector('.qty-text').innerText);
+                t += p * q;
+            });
+            document.getElementById('total-txt').innerText = 'R$ ' + t.toFixed(2).replace('.', ',');
+        }
+    </script>
+</body>
+</html>
